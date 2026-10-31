@@ -13,7 +13,7 @@
   "crons": [
     {
       "path": "/api/cron/month-end",
-      "schedule": "25 18 28-31 * *"
+      "schedule": "55 15 28-31 * *"
     }
   ]
 }

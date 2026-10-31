@@ -34,7 +34,7 @@ module.exports = {
   HOST: process.env.HOST || '0.0.0.0',
   PORT,
   APP_URL: (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, ''),
-  TIMEZONE: process.env.TIMEZONE || 'Asia/Kolkata',
+  TIMEZONE: process.env.TIMEZONE || 'Asia/Singapore',
   JWT_SECRET: loadJwtSecret(),
   TOKEN_TTL: process.env.TOKEN_TTL || '7d',
   AUTO_REPORT_ENABLED: (process.env.AUTO_REPORT_ENABLED || 'true').toLowerCase() !== 'false',
