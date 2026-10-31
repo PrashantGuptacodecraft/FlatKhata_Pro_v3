@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const express = require('express');
 const { PORT, HOST, APP_URL, TIMEZONE, FRONTEND_DIR } = require('./src/config');
 const store = require('./src/store');
@@ -416,6 +417,7 @@ app.all('/api/cron/month-end', wrap(async (req, res) => {
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
 app.use(express.static(FRONTEND_DIR, { index: 'index.html', maxAge: 0 }));
+app.get('*', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
