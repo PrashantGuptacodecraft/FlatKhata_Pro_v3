@@ -1,0 +1,10 @@
+{
+  "_note": "Edit emails, UPI IDs and phones here BEFORE the first start. Later changes are made in the app (Me tab). Passwords are never stored here; each member gets a unique temporary password on first run.",
+  "members": [
+    { "id": "prashant", "name": "Prashant", "role": "admin", "email": "prashant.gupta983869@gmail.com", "upi": "prashant@okaxis", "phone": "", "color": "#c98b3c" },
+    { "id": "aditya", "name": "Aditya", "role": "member", "email": "aditya.kitchen@gmail.com", "upi": "aditya@okicici", "phone": "", "color": "#7f9c6e" },
+    { "id": "abhishek", "name": "Abhishek", "role": "member", "email": "abhishek.kitchen@gmail.com", "upi": "abhishek@ybl", "phone": "", "color": "#6b8cae" },
+    { "id": "tanishq", "name": "Tanishq", "role": "member", "email": "tanishq.kitchen@gmail.com", "upi": "tanishq@paytm", "phone": "", "color": "#a4698c" },
+    { "id": "pranjil", "name": "Pranjil", "role": "member", "email": "pranjil.kitchen@gmail.com", "upi": "pranjil@oksbi", "phone": "", "color": "#b8864e" }
+  ]
+}

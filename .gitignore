@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment and sensitive credentials
+.env
+.env*.local
+*.env
+backend/.env
+backend/.env.*.local
+!*.env.example
+!backend/.env.example
+
+# Local data and secrets
+data/
+backend/data/
+secret.key
+backend/data/secret.key
+outbox/
+backend/data/outbox/
+
+# Vercel
+.vercel/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

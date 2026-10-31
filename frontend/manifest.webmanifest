@@ -1,0 +1,14 @@
+{
+  "name": "FlatKhata Pro",
+  "short_name": "FlatKhata",
+  "description": "Shared kitchen khata for the flat",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16120e",
+  "theme_color": "#16120e",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

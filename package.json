@@ -1,0 +1,23 @@
+{
+  "name": "flatkhata-pro",
+  "version": "3.0.0",
+  "private": true,
+  "description": "FlatKhata Pro: shared kitchen khata API, web app server and month-end email",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test": "cd backend && npm test"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.13.1"
+  }
+}
