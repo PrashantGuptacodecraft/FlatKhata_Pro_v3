@@ -3,6 +3,9 @@
   "functions": {
     "index.js": {
       "includeFiles": "{frontend/**,backend/config/**}"
+    },
+    "api/**": {
+      "includeFiles": "{frontend/**,backend/config/**}"
     }
   },
   "crons": [

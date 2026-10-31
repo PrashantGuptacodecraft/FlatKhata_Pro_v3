@@ -29,6 +29,18 @@ function ensureInitialized() {
   return initPromise;
 }
 
+// URL Normalizer: handles API requests whether prefixed with /api or not
+app.use((req, res, next) => {
+  if (!req.url.startsWith('/api')) {
+    const p = req.url.split('?')[0];
+    const isApi = ['/members', '/health', '/auth', '/me', '/dashboard', '/expenses', '/leave', '/settlement', '/admin', '/cron'].some((prefix) => p === prefix || p.startsWith(`${prefix}/`));
+    if (isApi) {
+      req.url = `/api${req.url}`;
+    }
+  }
+  next();
+});
+
 app.use('/api', async (req, res, next) => {
   try {
     await ensureInitialized();
@@ -112,9 +124,11 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, timezone: TIMEZONE, email: mailer.isConfigured() ? 'smtp' : 'dry-run' });
 });
 
-app.get('/api/members', (req, res) => {
-  res.json(store.db().members.map((m) => ({ id: m.id, name: m.name, color: m.color })));
-});
+app.get('/api/members', wrap(async (req, res) => {
+  const d = store.db();
+  const members = (d && d.members) || [];
+  res.json(members.map((m) => ({ id: m.id, name: m.name, color: m.color })));
+}));
 
 // ---- Authentication ----
 
