@@ -21,16 +21,20 @@ function ensureInitialized() {
     initPromise = (async () => {
       await store.initStore();
       await seed.initDatabase();
-    })();
+    })().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
   return initPromise;
 }
 
-app.use(async (req, res, next) => {
+app.use('/api', async (req, res, next) => {
   try {
     await ensureInitialized();
     next();
   } catch (err) {
+    console.error('[server] Database initialization failed:', err);
     next(err);
   }
 });
@@ -416,8 +420,6 @@ app.all('/api/cron/month-end', wrap(async (req, res) => {
 // ---- Static web app and errors ----
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
-app.use(express.static(FRONTEND_DIR, { index: 'index.html', maxAge: 0 }));
-app.get('*', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
@@ -433,6 +435,9 @@ app.use((err, req, res, next) => {
   console.error('[server]', err);
   return res.status(500).json({ error: 'Something went wrong on the server. Check the server log.' });
 });
+
+app.use(express.static(FRONTEND_DIR, { index: 'index.html', maxAge: 0 }));
+app.get('*', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 
 // ---- Start ----
 

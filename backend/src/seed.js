@@ -12,7 +12,7 @@ const mailer = require('./mailer');
 async function initDatabase() {
   if (store.load()) return false;
 
-  const roster = JSON.parse(fs.readFileSync(path.join(BACKEND_DIR, 'config', 'members.json'), 'utf8')).members;
+  const roster = require('../config/members.json').members;
   const now = new Date().toISOString();
   const members = [];
   const issued = [];

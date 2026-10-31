@@ -19,6 +19,7 @@ function getPool() {
       connectionString: DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: 10,
+      connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
     });
     pool.on('error', (err) => {
