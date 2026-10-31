@@ -4,10 +4,16 @@
     "index.js": {
       "includeFiles": "{frontend/**,backend/config/**}"
     },
-    "api/**": {
+    "api/index.js": {
       "includeFiles": "{frontend/**,backend/config/**}"
     }
   },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/month-end",

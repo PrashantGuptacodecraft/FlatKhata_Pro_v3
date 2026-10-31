@@ -29,8 +29,12 @@ function ensureInitialized() {
   return initPromise;
 }
 
-// URL Normalizer: handles API requests whether prefixed with /api or not
+// URL Normalizer: handles Vercel rewrites (x-matched-path / x-forwarded-uri) and missing /api prefixes
 app.use((req, res, next) => {
+  const original = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'];
+  if (original && original !== '/api' && original.startsWith('/api')) {
+    req.url = original;
+  }
   if (!req.url.startsWith('/api')) {
     const p = req.url.split('?')[0];
     const isApi = ['/members', '/health', '/auth', '/me', '/dashboard', '/expenses', '/leave', '/settlement', '/admin', '/cron'].some((prefix) => p === prefix || p.startsWith(`${prefix}/`));
