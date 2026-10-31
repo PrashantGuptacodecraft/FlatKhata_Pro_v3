@@ -5,7 +5,7 @@
   "description": "FlatKhata Pro: shared kitchen khata API, web app server and month-end email",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node index.js",
     "test": "cd backend && npm test"
   },
   "engines": {

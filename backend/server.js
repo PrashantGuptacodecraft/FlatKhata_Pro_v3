@@ -461,4 +461,5 @@ if (require.main === module) {
   });
 }
 
+app.startServer = startServer;
 module.exports = app;
