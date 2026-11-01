@@ -46,7 +46,7 @@ module.exports = {
   DATABASE_URL: (process.env.DATABASE_URL || '').trim(),
   HOST: process.env.HOST || '0.0.0.0',
   PORT,
-  APP_URL: (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, ''),
+  APP_URL: (process.env.APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : (isServerless ? 'https://flatkhataprov3.vercel.app' : `http://localhost:${PORT}`))).replace(/\/$/, ''),
   TIMEZONE: process.env.TIMEZONE || 'Asia/Kolkata',
   JWT_SECRET: loadJwtSecret(),
   TOKEN_TTL: process.env.TOKEN_TTL || '15d',
