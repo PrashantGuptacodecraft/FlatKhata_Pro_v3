@@ -20,6 +20,15 @@ let cachedSecret = null;
 function loadJwtSecret() {
   const fromEnv = (process.env.JWT_SECRET || '').trim();
   if (fromEnv.length >= 32) return fromEnv;
+  if (process.env.DATABASE_URL) {
+    // Derive a consistent, secure 64-char JWT secret from DATABASE_URL.
+    // In serverless environments (Vercel/Lambda), ephemeral filesystem cannot persist secret.key
+    // across cold starts and independent containers. Deriving from the secret DATABASE_URL ensures
+    // every serverless instance shares the identical JWT signing secret so user sessions persist for 15 days.
+    return crypto.createHmac('sha256', 'FlatKhata-Pro-Secret-Salt-v3')
+      .update(process.env.DATABASE_URL.trim())
+      .digest('hex');
+  }
   if (cachedSecret) return cachedSecret;
   if (fromEnv) {
     console.warn('[config] JWT_SECRET is shorter than 32 characters, so a stored secret is used instead.');
