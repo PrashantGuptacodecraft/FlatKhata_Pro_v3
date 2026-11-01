@@ -142,7 +142,7 @@ app.post('/api/auth/login', wrap(async (req, res) => {
   const key = `${req.ip}|${memberId}`;
 
   if (auth.loginRateLimited(key)) {
-    throw new HttpError(429, 'Too many wrong attempts. Wait 15 minutes and try again.');
+    throw new HttpError(429, 'Too many wrong attempts. Wait 10 minutes and try again.');
   }
   const m = store.db().members.find((x) => x.id === memberId);
   if (!m || !auth.matches(password, m.passwordHash)) {
@@ -151,6 +151,43 @@ app.post('/api/auth/login', wrap(async (req, res) => {
   }
   auth.clearLoginFailures(key);
   res.json({ token: auth.issueToken(m), user: publicMe(m) });
+}));
+
+app.post('/api/auth/forgot-password', wrap(async (req, res) => {
+  const memberId = String((req.body && req.body.memberId) || '').trim();
+  const m = store.db().members.find((x) => x.id === memberId);
+  if (!m) {
+    throw new HttpError(404, 'No flatmate found with that name.');
+  }
+  if (!m.email) {
+    throw new HttpError(400, 'No email address registered for this account.');
+  }
+  if (!mailer.isConfigured()) {
+    throw new HttpError(503, 'Email service is not set up on this server.');
+  }
+
+  const key = `forgot|${req.ip}|${memberId}`;
+  if (auth.loginRateLimited(key)) {
+    throw new HttpError(429, 'Too many reset requests. Wait 10 minutes and try again.');
+  }
+  auth.recordLoginFailure(key);
+
+  const temp = auth.generateTempPassword(store.db().members);
+  store.write((d) => {
+    const target = d.members.find((x) => x.id === m.id);
+    target.passwordHash = auth.hash(temp);
+    target.mustChangePassword = true;
+    target.tokenVersion += 1;
+    target.updatedAt = nowIso();
+    store.addAudit(d, target.name, 'RESET', 'Requested temporary password via email');
+  });
+
+  if (store.syncNow) {
+    await store.syncNow().catch((err) => console.error('[db] Error syncing password reset to DB:', err));
+  }
+
+  await mailer.sendCredentials(m, temp, 'reset');
+  res.json({ ok: true, email: m.email });
 }));
 
 app.get('/api/me', auth.requireAuth({ allowPendingChange: true }), (req, res) => {

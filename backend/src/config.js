@@ -49,7 +49,7 @@ module.exports = {
   APP_URL: (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, ''),
   TIMEZONE: process.env.TIMEZONE || 'Asia/Kolkata',
   JWT_SECRET: loadJwtSecret(),
-  TOKEN_TTL: process.env.TOKEN_TTL || '7d',
+  TOKEN_TTL: process.env.TOKEN_TTL || '15d',
   AUTO_REPORT_ENABLED: (process.env.AUTO_REPORT_ENABLED || 'true').toLowerCase() !== 'false',
   REPORT_CRON: process.env.REPORT_CRON || '55 23 * * *',
   SMTP: {

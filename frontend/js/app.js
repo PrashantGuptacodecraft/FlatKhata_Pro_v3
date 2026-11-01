@@ -275,6 +275,9 @@
           <form data-form="login" class="stack">
             <label class="field"><span class="label">Password</span>
               <input name="password" type="password" required autocomplete="current-password" /></label>
+            <div style="display:flex;justify-content:flex-end;margin:-4px 0 6px">
+              <button type="button" class="link-btn small" data-action="forgot-password">Forgot password?</button>
+            </div>
             <button type="submit" class="btn btn-primary btn-block">Sign in</button>
           </form>
           <p class="muted small">First time here? Use the temporary password from your welcome email. You will choose your own next.</p>
@@ -1221,6 +1224,20 @@
   const ACTIONS = {
     retry: () => boot(),
     'pick-member': (el) => { state.loginId = el.dataset.id; showLogin(); },
+    'forgot-password': async () => {
+      const m = state.members.find((x) => x.id === state.loginId);
+      if (!m) return toast('Select your name first.', 'error');
+      const ok = await askConfirm({
+        title: `Reset password for ${m.name}?`,
+        body: 'A new temporary password will be sent to your registered email address.',
+        okLabel: 'Send email',
+      });
+      if (!ok) return;
+      await run(
+        () => api('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ memberId: m.id }) }),
+        'Temporary password sent! Check your email.'
+      );
+    },
     'sign-out': () => { clearSession(); showLogin(); },
     tab: (el) => goTo(el.dataset.tab),
     month: (el) => goMonth(shiftMonthClient(state.month, Number(el.dataset.delta))),

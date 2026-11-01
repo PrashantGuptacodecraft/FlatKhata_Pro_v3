@@ -12,8 +12,8 @@ const MAX_LENGTH = 72; // bcrypt ignores anything past 72 bytes, so we cap it.
 // Easy to read aloud: no I, l, O, 0 or 1.
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_FAILURES = 8;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 20;
 const failures = new Map();
 
 // Returns an error message, or null when the password is acceptable.
