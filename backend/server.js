@@ -298,7 +298,7 @@ function buildDashboard(req) {
       lastReport: rec.reports[0] || null,
       autoSentAt: rec.autoSentAt,
     },
-    audit: d.auditLog.slice(0, 30),
+    audit: d.auditLog.slice(0, 60),
   };
 }
 
@@ -374,7 +374,7 @@ app.put('/api/leave', auth.requireAuth(), wrap(async (req, res) => {
     throw new HttpError(400, `Days away must be a whole number from 0 to ${N}.`);
   }
   const note = String((req.body && req.body.note) || '').trim().slice(0, 120);
-  const rule = days > 7 ? 'more than 7, so deducted' : '7 or fewer, no deduction';
+  const rule = days >= 7 ? '7 or more, so deducted' : '6 or fewer, no deduction';
 
   await store.write((d) => {
     d.leaves[ym] ||= {};

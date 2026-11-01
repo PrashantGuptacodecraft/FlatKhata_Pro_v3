@@ -31,7 +31,7 @@ test('days in month uses the real calendar, including leap years', () => {
   assert.equal(daysInMonth('2028-02'), 29);
 });
 
-test('away 5 days (<= 7) is not deducted; away 10 days (> 7) is deducted', () => {
+test('away 5 days (< 7) is not deducted; away 10 days (>= 7) is deducted', () => {
   const s = computeSettlement({ ym: '2026-11', members, expenses, leaves });
   const aditya = s.members.find((m) => m.id === 'aditya');
   const abhishek = s.members.find((m) => m.id === 'abhishek');
@@ -43,13 +43,13 @@ test('away 5 days (<= 7) is not deducted; away 10 days (> 7) is deducted', () =>
   assert.equal(abhishek.activeDays, 20);
 });
 
-test('exactly 7 days away is NOT exempt, and 8 days IS exempt (strict > 7)', () => {
+test('exactly 7 days away IS exempt (deducted), and 6 days is NOT exempt (rule: >= 7)', () => {
+  const at6 = computeSettlement({ ym: '2026-11', members, expenses, leaves: { prashant: { days: 6 } } });
   const at7 = computeSettlement({ ym: '2026-11', members, expenses, leaves: { prashant: { days: 7 } } });
-  const at8 = computeSettlement({ ym: '2026-11', members, expenses, leaves: { prashant: { days: 8 } } });
-  assert.equal(at7.members[0].exempt, false);
-  assert.equal(at7.members[0].activeDays, 30);
-  assert.equal(at8.members[0].exempt, true);
-  assert.equal(at8.members[0].activeDays, 22);
+  assert.equal(at6.members[0].exempt, false);
+  assert.equal(at6.members[0].activeDays, 30);
+  assert.equal(at7.members[0].exempt, true);
+  assert.equal(at7.members[0].activeDays, 23);
 });
 
 test('away days are capped at the month length and never negative', () => {

@@ -663,7 +663,7 @@
     const net = Math.round(m.net);
     const away = m.daysAway ? ` · ${m.daysAway} away (${m.exempt ? 'deducted' : 'no cut'})` : '';
     return `
-      <div class="ledger-row">
+      <div class="ledger-row" data-action="view-member-khata" data-id="${esc(m.id)}" role="button" tabindex="0" title="Click to view all payments by ${esc(m.name)}" style="cursor: pointer;">
         <div class="who">
           ${avatar(m)}
           <div class="ledger-main">
@@ -701,9 +701,19 @@
           ${d.transfers.length ? '<p class="muted small">Tap Pay via UPI to open your UPI app with the amount filled in. Mark it paid once the money has moved.</p>' : ''}
         </section>
         <section class="stack" aria-labelledby="mathHead">
-          <h2 id="mathHead">How each share is worked out</h2>
+          <div class="section-head">
+            <h2 id="mathHead">How each share is worked out</h2>
+            <span class="muted small">Tap any flatmate to view their purchases</span>
+          </div>
           <div class="ledger">${d.members.map(personRow).join('')}</div>
-          <p class="muted small">Share = active days × per-day rate. Active days = days in the month minus deducted days. Away more than 7 days means those days are deducted. Net = paid minus share.</p>
+          <p class="muted small">Share = active days × per-day rate. Active days = days in the month minus deducted days. Away 7 or more days means all those days are deducted. Net = paid minus share.</p>
+        </section>
+        <section class="card" aria-labelledby="actHeadHisab">
+          <div class="section-head">
+            <h2 id="actHeadHisab">Activity & History</h2>
+            <span class="muted small">Transparent to everyone</span>
+          </div>
+          ${auditHtml()}
         </section>
       </section>`;
   }
@@ -733,7 +743,7 @@
       ? 'Present all month.'
       : m.exempt
         ? `${m.daysAway} days away. ${m.deductedDays} days deducted.`
-        : `${m.daysAway} days away. Within the 7-day limit, so nothing is deducted.`;
+        : `${m.daysAway} days away. Within the 6-day limit, so nothing is deducted.`;
     return `
       <article class="person-card ${isMe ? 'is-me' : ''}">
         <header class="person-head">
@@ -755,9 +765,9 @@
       <section class="stack-lg">
         <div class="page-head"><div><h1>Leave</h1><p>Days away in ${esc(d.label)}.</p></div></div>
         <div class="rule-card">
-          <p><b>7 days or fewer:</b> nothing is deducted.</p>
-          <p><b>More than 7 days:</b> every away day comes off that person's share.</p>
-          <p class="muted small">Away 10 days, 10 days come off. Away 7 days, nothing comes off.</p>
+          <p><b>6 days or fewer:</b> nothing is deducted (normal flat sharing).</p>
+          <p><b>7 days or more (inclusive):</b> all away days are deducted from that person's share.</p>
+          <p class="muted small">Away 7 days, all 7 days come off. Away 10 days, all 10 days come off. Away 5 days, nothing comes off.</p>
         </div>
         <div class="stack">${d.members.map(leaveCard).join('')}</div>
       </section>`;
@@ -793,13 +803,25 @@
   }
 
   function auditHtml() {
-    const items = state.data.audit.slice(0, 15);
+    const items = (state.data.audit || []).slice(0, 50);
     if (!items.length) return emptyState('Nothing recorded yet.');
-    return `<div class="ledger">${items.map((a) => `
-      <div class="ledger-row log-row">
-        <div class="ledger-main"><p class="small"><b>${esc(a.actor)}</b> ${esc(a.detail)}</p></div>
-        <span class="muted small">${fmtDateTime(a.at)}</span>
-      </div>`).join('')}</div>`;
+    return `<div class="ledger">${items.map((a) => {
+      let tagClass = 'tag';
+      if (a.action === 'ADDED') tagClass = 'tag tag-added';
+      else if (a.action === 'EDITED') tagClass = 'tag tag-edited';
+      else if (a.action === 'DELETED') tagClass = 'tag tag-deleted';
+      else if (a.action === 'PAYMENT') tagClass = 'tag tag-payment';
+      return `
+        <div class="ledger-row log-row">
+          <div class="ledger-main">
+            <p class="small">
+              <span class="${tagClass}" style="margin-left:0;margin-right:6px;">${esc(a.action)}</span>
+              <b>${esc(a.actor)}</b>: ${esc(a.detail)}
+            </p>
+          </div>
+          <span class="muted small">${fmtDateTime(a.at)}</span>
+        </div>`;
+    }).join('')}</div>`;
   }
 
   function meView() {
@@ -1246,6 +1268,7 @@
       $('#feedBlock').outerHTML = feedHtml();
     },
     'khata-member': (el) => { state.khata.member = el.dataset.id; render(); },
+    'view-member-khata': (el) => { state.khata.member = el.dataset.id; goTo('khata'); },
     preset: (el) => {
       const p = PRESETS[Number(el.dataset.index)];
       setField('item', p.item);

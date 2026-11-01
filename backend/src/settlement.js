@@ -10,9 +10,10 @@ const CATEGORIES = [
   'LPG Gas & Utility',
 ];
 
-// House rule: a member is exempt only when away for MORE than 7 days.
-// 7 days or fewer = present, nothing deducted. 8+ days = every away day is deducted.
-const EXEMPT_ABOVE_DAYS = 7;
+// House rule: a member is exempt when away for 7 or more days (inclusive).
+// 6 days or fewer = present, nothing deducted. 7+ days = every away day is deducted.
+const EXEMPT_MIN_DAYS = 7;
+const EXEMPT_ABOVE_DAYS = EXEMPT_MIN_DAYS;
 
 // Differences smaller than this (in rupees) are treated as "settled".
 const TOLERANCE = 0.5;
@@ -48,7 +49,7 @@ function computeSettlement({ ym, members, expenses, leaves = {}, settledKeys = {
     const paid = mine.reduce((sum, e) => sum + Number(e.amount), 0);
     const requested = Math.round(Number((leaves[m.id] || {}).days) || 0);
     const daysAway = Math.min(Math.max(requested, 0), N);
-    const exempt = daysAway > EXEMPT_ABOVE_DAYS;
+    const exempt = daysAway >= EXEMPT_MIN_DAYS;
     const deductedDays = exempt ? daysAway : 0;
     return {
       id: m.id,

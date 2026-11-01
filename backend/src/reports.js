@@ -73,7 +73,7 @@ function buildMonthEmail(s, me) {
     <h2 style="font-family:Georgia,serif;font-size:17px;margin:22px 0 8px">Who pays whom</h2>
     <ul style="padding-left:18px;margin:0 0 14px">${transferItems}</ul>
     <p style="font-size:12px;color:#6b5d48;margin:0">
-      Share = active days × per-day rate. Away more than 7 days? Those days are deducted. 7 days or fewer are not.
+      Share = active days × per-day rate. Away 7 or more days? Those days are deducted. 6 days or fewer are not.
       Amounts are rounded to whole rupees.
     </p>`);
 

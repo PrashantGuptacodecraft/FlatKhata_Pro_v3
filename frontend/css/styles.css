@@ -78,6 +78,10 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--saffron); border-radius: 6px;
   color: var(--saffron); font-size: 11px; font-weight: 600; vertical-align: middle;
 }
+.tag-added { border-color: #6b8cae; color: #8bb3db; }
+.tag-edited { border-color: #e09f3e; color: #f4b251; }
+.tag-deleted { border-color: #d9534f; color: #ff6b6b; }
+.tag-payment { border-color: #5cb85c; color: #73d173; }
 .line-through { text-decoration: line-through; }
 
 /* ---------- Top bar ---------- */
