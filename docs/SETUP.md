@@ -72,7 +72,7 @@ Spaces in the App Password are removed automatically. Restart the server.
 
 Other providers work the same way. Use their SMTP host, port and credentials.
 
-**Month-end schedule:** `REPORT_CRON=55 23 * * *` checks every night at 11:55 pm (in `TIMEZONE`) and sends only on the last day of the month. Set `AUTO_REPORT_ENABLED=false` to turn off the automatic email and send manually from the Hisab tab.
+**Month-end schedule:** `REPORT_CRON=0 20 * * *` checks every night at 8:00 pm (in `TIMEZONE`, Asia/Kolkata) and sends only on the last day of the month. Set `AUTO_REPORT_ENABLED=false` to turn off the automatic email and send manually from the Hisab tab.
 
 **Missed report:** if the server was off on the last night, it sends the missed report during the first 7 days of the next month.
 

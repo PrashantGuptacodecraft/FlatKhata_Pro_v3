@@ -51,7 +51,7 @@ module.exports = {
   JWT_SECRET: loadJwtSecret(),
   TOKEN_TTL: process.env.TOKEN_TTL || '15d',
   AUTO_REPORT_ENABLED: (process.env.AUTO_REPORT_ENABLED || 'true').toLowerCase() !== 'false',
-  REPORT_CRON: process.env.REPORT_CRON || '55 23 * * *',
+  REPORT_CRON: process.env.REPORT_CRON || '0 20 * * *', // 8:00 PM IST on the last day of each month
   SMTP: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT) || 587,

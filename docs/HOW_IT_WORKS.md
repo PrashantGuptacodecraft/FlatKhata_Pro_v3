@@ -74,7 +74,7 @@ Shares are shown rounded to the rupee. Transfers are rounded to the rupee, so th
 
 ## The month-end email
 
-Every night at 11:55 pm (flat timezone), the server checks whether today is the last day of the month. If it is, and the report hasn't already been sent this month, it sends one email to each flatmate with an email address.
+Every night at 8:00 pm (flat timezone, Asia/Kolkata), the server checks whether today is the last day of the month. If it is, and the report hasn't already been sent this month, it sends one email to each flatmate with an email address.
 
 Each email contains:
 
@@ -85,4 +85,4 @@ Each email contains:
 
 The send is recorded in the month's log, and the Hisab tab shows when it went out and how many delivered. The admin can also send it manually from the Hisab tab at any time. A manual send does not block the automatic one.
 
-Purchases added after 11:55 pm on the last day are not in the emailed report. Use the manual send after that if you need them.
+Purchases added after 8:00 pm on the last day are not in the emailed report. Use the manual send after that if you need them.
