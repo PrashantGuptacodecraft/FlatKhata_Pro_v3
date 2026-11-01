@@ -803,7 +803,9 @@
   }
 
   function auditHtml() {
-    const items = (state.data.audit || []).slice(0, 50);
+    const items = (state.data.audit || [])
+      .filter((a) => a.action !== 'PAYMENT' && !/marked paid|unmarked/i.test(a.detail || ''))
+      .slice(0, 50);
     if (!items.length) return emptyState('Nothing recorded yet.');
     return `<div class="ledger">${items.map((a) => {
       let tagClass = 'tag';
@@ -884,7 +886,7 @@
   async function goTo(tab) {
     state.tab = tab;
     render();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   }
 
   function setField(name, value) {
@@ -940,11 +942,23 @@
   }
 
   async function togglePaid(key, settled) {
+    // Optimistic instant feedback (0ms button response)
+    const t = state.data && state.data.transfers ? state.data.transfers.find((x) => x.key === key) : null;
+    if (t) {
+      t.settled = settled;
+      render();
+    }
     const res = await run(() => api(`/api/settlement/${encodeURIComponent(state.month)}/paid`, {
       method: 'PUT',
       body: { key, settled },
     }));
-    if (res) await refresh();
+    if (res) {
+      await refresh();
+    } else if (t) {
+      // Revert if network error
+      t.settled = !settled;
+      render();
+    }
   }
 
   async function sendReport() {
@@ -1170,7 +1184,11 @@
 
     const editing = state.editingId;
     const btn = form.querySelector('button[type="submit"]');
-    btn.disabled = true;
+    const origText = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = editing ? 'Updating…' : 'Adding…';
+    }
     try {
       const res = editing
         ? await api(`/api/expenses/${encodeURIComponent(editing)}`, { method: 'PUT', body })
@@ -1190,7 +1208,10 @@
       }
     } catch (err) {
       toast(err.message, 'error');
-      btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = origText;
+      }
     }
   }
 

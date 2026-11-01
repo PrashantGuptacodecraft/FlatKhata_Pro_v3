@@ -258,24 +258,14 @@ async function saveState(state) {
       );
     }
 
-    // 2. Members
-    for (const m of state.members || []) {
-      await client.query(
-        `INSERT INTO members (id, name, email, upi, phone, role, color, avatar, password_hash, token_version, must_change_password, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         ON CONFLICT (id) DO UPDATE SET
-           name = EXCLUDED.name,
-           email = EXCLUDED.email,
-           upi = EXCLUDED.upi,
-           phone = EXCLUDED.phone,
-           role = EXCLUDED.role,
-           color = EXCLUDED.color,
-           avatar = EXCLUDED.avatar,
-           password_hash = EXCLUDED.password_hash,
-           token_version = EXCLUDED.token_version,
-           must_change_password = EXCLUDED.must_change_password,
-           updated_at = EXCLUDED.updated_at`,
-        [
+    // 2. Members (Bulk Upsert in 1 single query)
+    if (Array.isArray(state.members) && state.members.length > 0) {
+      const memberParams = [];
+      const memberValues = [];
+      state.members.forEach((m, i) => {
+        const o = i * 13;
+        memberValues.push(`($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9}, $${o + 10}, $${o + 11}, $${o + 12}, $${o + 13})`);
+        memberParams.push(
           m.id,
           m.name,
           m.email || '',
@@ -288,73 +278,119 @@ async function saveState(state) {
           m.tokenVersion || 0,
           Boolean(m.mustChangePassword),
           m.createdAt || new Date(),
-          m.updatedAt || new Date(),
-        ]
+          m.updatedAt || new Date()
+        );
+      });
+      await client.query(
+        `INSERT INTO members (id, name, email, upi, phone, role, color, avatar, password_hash, token_version, must_change_password, created_at, updated_at)
+         VALUES ${memberValues.join(', ')}
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name,
+           email = EXCLUDED.email,
+           upi = EXCLUDED.upi,
+           phone = EXCLUDED.phone,
+           role = EXCLUDED.role,
+           color = EXCLUDED.color,
+           avatar = EXCLUDED.avatar,
+           password_hash = EXCLUDED.password_hash,
+           token_version = EXCLUDED.token_version,
+           must_change_password = EXCLUDED.must_change_password,
+           updated_at = EXCLUDED.updated_at`,
+        memberParams
       );
     }
 
-    // 3. Expenses
+    // 3. Expenses (Bulk Upsert in 1 single query)
     const currentExpIds = (state.expenses || []).map((e) => e.id);
     if (currentExpIds.length === 0) {
       await client.query('DELETE FROM expenses');
     } else {
       await client.query('DELETE FROM expenses WHERE NOT (id = ANY($1))', [currentExpIds]);
-      for (const e of state.expenses || []) {
-        await client.query(
-          `INSERT INTO expenses (id, member_id, item, category, amount, date, receipt, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-           ON CONFLICT (id) DO UPDATE SET
-             item = EXCLUDED.item,
-             category = EXCLUDED.category,
-             amount = EXCLUDED.amount,
-             date = EXCLUDED.date,
-             receipt = EXCLUDED.receipt,
-             updated_at = EXCLUDED.updated_at`,
-          [
-            e.id,
-            e.memberId,
-            e.item,
-            e.category,
-            e.amount,
-            e.date,
-            e.receipt || null,
-            e.createdAt || new Date(),
-            e.updatedAt || null,
-          ]
+      const expParams = [];
+      const expValues = [];
+      state.expenses.forEach((e, i) => {
+        const o = i * 9;
+        expValues.push(`($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5}, $${o + 6}, $${o + 7}, $${o + 8}, $${o + 9})`);
+        expParams.push(
+          e.id,
+          e.memberId,
+          e.item,
+          e.category,
+          e.amount,
+          e.date,
+          e.receipt || null,
+          e.createdAt || new Date(),
+          e.updatedAt || null
         );
-      }
+      });
+      await client.query(
+        `INSERT INTO expenses (id, member_id, item, category, amount, date, receipt, created_at, updated_at)
+         VALUES ${expValues.join(', ')}
+         ON CONFLICT (id) DO UPDATE SET
+           item = EXCLUDED.item,
+           category = EXCLUDED.category,
+           amount = EXCLUDED.amount,
+           date = EXCLUDED.date,
+           receipt = EXCLUDED.receipt,
+           updated_at = EXCLUDED.updated_at`,
+        expParams
+      );
     }
 
-    // 4. Leaves
+    // 4. Leaves (Bulk Upsert in 1 single query)
+    const leaveList = [];
     for (const [month, memberLeaves] of Object.entries(state.leaves || {})) {
       for (const [memberId, leave] of Object.entries(memberLeaves || {})) {
-        await client.query(
-          `INSERT INTO leaves (month, member_id, days, note, updated_at)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (month, member_id) DO UPDATE SET
-             days = EXCLUDED.days,
-             note = EXCLUDED.note,
-             updated_at = EXCLUDED.updated_at`,
-          [month, memberId, leave.days, leave.note || '', leave.updatedAt || new Date()]
-        );
+        leaveList.push({ month, memberId, days: leave.days, note: leave.note || '', updatedAt: leave.updatedAt || new Date() });
       }
     }
+    if (leaveList.length > 0) {
+      const leaveParams = [];
+      const leaveValues = [];
+      leaveList.forEach((l, i) => {
+        const o = i * 5;
+        leaveValues.push(`($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4}, $${o + 5})`);
+        leaveParams.push(l.month, l.memberId, l.days, l.note, l.updatedAt);
+      });
+      await client.query(
+        `INSERT INTO leaves (month, member_id, days, note, updated_at)
+         VALUES ${leaveValues.join(', ')}
+         ON CONFLICT (month, member_id) DO UPDATE SET
+           days = EXCLUDED.days,
+           note = EXCLUDED.note,
+           updated_at = EXCLUDED.updated_at`,
+        leaveParams
+      );
+    }
 
-    // 5. Months (settled transfers, metadata, reports)
+    // 5. Months (Bulk settled transfers and metadata)
+    const settledList = [];
     for (const [month, monthData] of Object.entries(state.months || {})) {
       if (monthData.settledKeys) {
         for (const [transferKey, settled] of Object.entries(monthData.settledKeys)) {
-          await client.query(
-            `INSERT INTO settled_transfers (month, transfer_key, settled, updated_at)
-             VALUES ($1, $2, $3, NOW())
-             ON CONFLICT (month, transfer_key) DO UPDATE SET
-               settled = EXCLUDED.settled,
-               updated_at = NOW()`,
-            [month, transferKey, Boolean(settled)]
-          );
+          settledList.push({ month, transferKey, settled: Boolean(settled) });
         }
       }
+    }
+    if (settledList.length > 0) {
+      const setParams = [];
+      const setValues = [];
+      settledList.forEach((s, i) => {
+        const o = i * 3;
+        setValues.push(`($${o + 1}, $${o + 2}, $${o + 3})`);
+        setParams.push(s.month, s.transferKey, s.settled);
+      });
+      await client.query(
+        `INSERT INTO settled_transfers (month, transfer_key, settled)
+         VALUES ${setValues.join(', ')}
+         ON CONFLICT (month, transfer_key) DO UPDATE SET
+           settled = EXCLUDED.settled,
+           updated_at = NOW()`,
+        setParams
+      );
+    }
 
+    for (const [month, monthData] of Object.entries(state.months || {})) {
       await client.query(
         `INSERT INTO month_metadata (month, auto_sent_at, updated_at)
          VALUES ($1, $2, NOW())
@@ -365,16 +401,21 @@ async function saveState(state) {
       );
     }
 
-    // 6. Audit logs (keep latest entries)
+    // 6. Audit logs (Bulk Insert in 1 single query)
     if (Array.isArray(state.auditLog) && state.auditLog.length > 0) {
-      // Clean and refresh audit logs or insert latest
       await client.query('DELETE FROM audit_logs');
-      for (const a of state.auditLog.slice(0, 300)) {
-        await client.query(
-          `INSERT INTO audit_logs (at, actor, action, detail) VALUES ($1, $2, $3, $4)`,
-          [a.at ? new Date(a.at) : new Date(), a.actor, a.action, a.detail]
-        );
-      }
+      const slice = state.auditLog.slice(0, 300);
+      const auditParams = [];
+      const auditValues = [];
+      slice.forEach((a, i) => {
+        const o = i * 4;
+        auditValues.push(`($${o + 1}, $${o + 2}, $${o + 3}, $${o + 4})`);
+        auditParams.push(a.at ? new Date(a.at) : new Date(), a.actor, a.action, a.detail);
+      });
+      await client.query(
+        `INSERT INTO audit_logs (at, actor, action, detail) VALUES ${auditValues.join(', ')}`,
+        auditParams
+      );
     }
 
     await client.query('COMMIT');

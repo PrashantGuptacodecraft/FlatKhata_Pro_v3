@@ -24,7 +24,26 @@
 
 *,
 *::before,
-*::after { box-sizing: border-box; }
+*::after {
+  box-sizing: border-box;
+}
+
+html, body, button, a, input, select, textarea, .btn, .chip, .tab, .icon-btn, .ledger-row, [data-action], [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, .btn, .chip, .tab, .icon-btn, [data-action] {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.05s ease, opacity 0.05s ease;
+}
+
+button:active, .btn:active, .chip:active, .tab:active, .icon-btn:active {
+  transform: scale(0.97);
+  opacity: 0.88;
+}
 
 html { -webkit-text-size-adjust: 100%; }
 

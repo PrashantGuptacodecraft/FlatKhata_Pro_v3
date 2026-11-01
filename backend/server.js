@@ -399,7 +399,6 @@ app.put('/api/settlement/:ym/paid', auth.requireAuth(), wrap(async (req, res) =>
   }
   await store.write((d) => {
     store.ensureMonth(d, ym).settledKeys[key] = settled;
-    store.addAudit(d, me.name, 'PAYMENT', `${settled ? 'Marked paid' : 'Unmarked'}: ${t.fromName} to ${t.toName} ${inr(t.amount)}`);
   });
   res.json({ ok: true });
 }));
