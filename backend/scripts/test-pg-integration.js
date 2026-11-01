@@ -52,10 +52,12 @@ async function testIntegration() {
   console.log('   Expense confirmed in PostgreSQL:', pgExp.rows[0].item, pgExp.rows[0].amount);
 
   // 5. Test deleting the test expense and syncing
-  console.log('5. Cleaning up test expense...');
+  console.log('5. Cleaning up test expense and test audit log...');
   await store.write((d) => {
     d.expenses = d.expenses.filter((e) => e.id !== testExpId);
+    d.auditLog = (d.auditLog || []).filter((a) => !a.detail.includes('Test Milk Pack'));
   });
+  await pool.query("DELETE FROM audit_logs WHERE detail LIKE '%Test Milk Pack%'");
 
   const pgExpAfter = await pool.query('SELECT * FROM expenses WHERE id = $1', [testExpId]);
   assert.equal(pgExpAfter.rows.length, 0, 'Expense should be removed from PostgreSQL');
