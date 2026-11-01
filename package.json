@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "reset-password": "node backend/scripts/reset-password.js",
     "test": "cd backend && npm test"
   },
   "engines": {

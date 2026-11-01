@@ -31,7 +31,7 @@ async function testIntegration() {
   // 4. Test adding an expense and syncing to PostgreSQL
   console.log('4. Testing adding an expense...');
   const testExpId = 'test_exp_' + Date.now();
-  store.write((d) => {
+  await store.write((d) => {
     d.expenses.push({
       id: testExpId,
       memberId: 'prashant',
@@ -46,8 +46,6 @@ async function testIntegration() {
     store.addAudit(d, 'Prashant', 'ADDED', 'Added ₹60 for Test Milk Pack');
   });
 
-  await store.syncNow();
-
   // Check it is in PG
   const pgExp = await pool.query('SELECT * FROM expenses WHERE id = $1', [testExpId]);
   assert.equal(pgExp.rows.length, 1, 'Expense should be found in PostgreSQL');
@@ -55,10 +53,9 @@ async function testIntegration() {
 
   // 5. Test deleting the test expense and syncing
   console.log('5. Cleaning up test expense...');
-  store.write((d) => {
+  await store.write((d) => {
     d.expenses = d.expenses.filter((e) => e.id !== testExpId);
   });
-  await store.syncNow();
 
   const pgExpAfter = await pool.query('SELECT * FROM expenses WHERE id = $1', [testExpId]);
   assert.equal(pgExpAfter.rows.length, 0, 'Expense should be removed from PostgreSQL');

@@ -133,9 +133,18 @@ async function loadState() {
   const p = getPool();
   if (!p) return null;
 
-  const client = await p.connect();
   try {
-    const memberRes = await client.query('SELECT * FROM members ORDER BY id');
+    const [memberRes, expenseRes, leaveRes, settledRes, metaRes, reportRes, auditRes, configRes] = await Promise.all([
+      p.query('SELECT * FROM members ORDER BY id'),
+      p.query('SELECT * FROM expenses ORDER BY date DESC, created_at DESC'),
+      p.query('SELECT * FROM leaves'),
+      p.query('SELECT * FROM settled_transfers'),
+      p.query('SELECT * FROM month_metadata'),
+      p.query('SELECT * FROM month_reports ORDER BY sent_at DESC'),
+      p.query('SELECT * FROM audit_logs ORDER BY at DESC, id DESC LIMIT 300'),
+      p.query('SELECT * FROM system_config')
+    ]);
+
     if (memberRes.rows.length === 0) {
       return null; // Not seeded yet
     }
@@ -156,7 +165,6 @@ async function loadState() {
       updatedAt: m.updated_at ? new Date(m.updated_at).toISOString() : new Date().toISOString(),
     }));
 
-    const expenseRes = await client.query('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
     const expenses = expenseRes.rows.map((e) => ({
       id: e.id,
       memberId: e.member_id,
@@ -169,7 +177,6 @@ async function loadState() {
       updatedAt: e.updated_at ? new Date(e.updated_at).toISOString() : null,
     }));
 
-    const leaveRes = await client.query('SELECT * FROM leaves');
     const leaves = {};
     for (const l of leaveRes.rows) {
       leaves[l.month] ||= {};
@@ -181,19 +188,16 @@ async function loadState() {
     }
 
     const months = {};
-    const settledRes = await client.query('SELECT * FROM settled_transfers');
     for (const s of settledRes.rows) {
       months[s.month] ||= { settledKeys: {}, reports: [], autoSentAt: null };
       months[s.month].settledKeys[s.transfer_key] = Boolean(s.settled);
     }
 
-    const metaRes = await client.query('SELECT * FROM month_metadata');
     for (const m of metaRes.rows) {
       months[m.month] ||= { settledKeys: {}, reports: [], autoSentAt: null };
       months[m.month].autoSentAt = m.auto_sent_at ? new Date(m.auto_sent_at).toISOString() : null;
     }
 
-    const reportRes = await client.query('SELECT * FROM month_reports ORDER BY sent_at DESC');
     for (const r of reportRes.rows) {
       months[r.month] ||= { settledKeys: {}, reports: [], autoSentAt: null };
       months[r.month].reports.push({
@@ -205,7 +209,6 @@ async function loadState() {
       });
     }
 
-    const auditRes = await client.query('SELECT * FROM audit_logs ORDER BY at DESC, id DESC LIMIT 300');
     const auditLog = auditRes.rows.map((a) => ({
       at: a.at ? new Date(a.at).toISOString() : new Date().toISOString(),
       actor: a.actor,
@@ -213,7 +216,6 @@ async function loadState() {
       detail: a.detail,
     }));
 
-    const configRes = await client.query('SELECT * FROM system_config');
     const configMap = {};
     for (const row of configRes.rows) {
       configMap[row.key] = row.value;
@@ -228,8 +230,9 @@ async function loadState() {
       months,
       auditLog,
     };
-  } finally {
-    client.release();
+  } catch (err) {
+    console.error('[db] Error loading state from PostgreSQL:', err.message);
+    throw err;
   }
 }
 

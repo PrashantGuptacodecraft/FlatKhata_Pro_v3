@@ -48,6 +48,7 @@ app.use((req, res, next) => {
 app.use('/api', async (req, res, next) => {
   try {
     await ensureInitialized();
+    await store.refreshIfStale(2000);
     next();
   } catch (err) {
     console.error('[server] Database initialization failed:', err);
@@ -173,7 +174,7 @@ app.post('/api/auth/forgot-password', wrap(async (req, res) => {
   auth.recordLoginFailure(key);
 
   const temp = auth.generateTempPassword(store.db().members);
-  store.write((d) => {
+  await store.write((d) => {
     const target = d.members.find((x) => x.id === m.id);
     target.passwordHash = auth.hash(temp);
     target.mustChangePassword = true;
@@ -181,10 +182,6 @@ app.post('/api/auth/forgot-password', wrap(async (req, res) => {
     target.updatedAt = nowIso();
     store.addAudit(d, target.name, 'RESET', 'Requested temporary password via email');
   });
-
-  if (store.syncNow) {
-    await store.syncNow().catch((err) => console.error('[db] Error syncing password reset to DB:', err));
-  }
 
   await mailer.sendCredentials(m, temp, 'reset');
   res.json({ ok: true, email: m.email });
@@ -195,7 +192,7 @@ app.get('/api/me', auth.requireAuth({ allowPendingChange: true }), (req, res) =>
 });
 
 // Used both by "Change password" and by the forced first-time change.
-app.post('/api/me/password', auth.requireAuth({ allowPendingChange: true }), wrap((req, res) => {
+app.post('/api/me/password', auth.requireAuth({ allowPendingChange: true }), wrap(async (req, res) => {
   const currentPassword = String((req.body && req.body.currentPassword) || '');
   const newPassword = String((req.body && req.body.newPassword) || '');
   const me = req.user;
@@ -212,7 +209,7 @@ app.post('/api/me/password', auth.requireAuth({ allowPendingChange: true }), wra
     throw new HttpError(400, 'No other flatmate can use the same password. Try another.');
   }
 
-  store.write((d) => {
+  await store.write((d) => {
     const m = d.members.find((x) => x.id === me.id);
     m.passwordHash = auth.hash(newPassword);
     m.mustChangePassword = false;
@@ -227,7 +224,7 @@ app.post('/api/me/password', auth.requireAuth({ allowPendingChange: true }), wra
 
 // ---- Profile ----
 
-app.put('/api/me/profile', auth.requireAuth(), wrap((req, res) => {
+app.put('/api/me/profile', auth.requireAuth(), wrap(async (req, res) => {
   const email = String((req.body && req.body.email) || '').trim().toLowerCase();
   const upi = String((req.body && req.body.upi) || '').trim();
   const phone = String((req.body && req.body.phone) || '').trim().slice(0, 20);
@@ -235,7 +232,7 @@ app.put('/api/me/profile', auth.requireAuth(), wrap((req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
   if (!/^[\w.-]{2,256}@[A-Za-z]{2,64}$/.test(upi)) throw new HttpError(400, 'Enter a UPI ID like name@bank.');
 
-  store.write((d) => {
+  await store.write((d) => {
     const m = d.members.find((x) => x.id === req.user.id);
     Object.assign(m, { email, upi, phone, updatedAt: nowIso() });
     store.addAudit(d, m.name, 'PROFILE', `Updated contact details (${email}, UPI ${upi})`);
@@ -243,12 +240,12 @@ app.put('/api/me/profile', auth.requireAuth(), wrap((req, res) => {
   res.json({ user: publicMe(req.user) });
 }));
 
-app.put('/api/me/avatar', auth.requireAuth(), wrap((req, res) => {
+app.put('/api/me/avatar', auth.requireAuth(), wrap(async (req, res) => {
   const avatar = req.body ? req.body.avatar : undefined;
   const ok = avatar === null || (typeof avatar === 'string' && IMAGE_RE.test(avatar) && avatar.length <= 400000);
   if (!ok) throw new HttpError(400, 'Choose an image under about 300 KB.');
 
-  store.write((d) => {
+  await store.write((d) => {
     const m = d.members.find((x) => x.id === req.user.id);
     m.avatar = avatar;
     store.addAudit(d, m.name, 'PROFILE', avatar ? 'Changed profile photo' : 'Removed profile photo');
@@ -311,10 +308,10 @@ app.get('/api/dashboard', auth.requireAuth(), wrap((req, res) => {
 
 // ---- Purchases: anyone can add; only the author can edit or delete ----
 
-app.post('/api/expenses', auth.requireAuth(), wrap((req, res) => {
+app.post('/api/expenses', auth.requireAuth(), wrap(async (req, res) => {
   const input = parseExpense(req.body || {});
   const me = req.user;
-  const created = store.write((d) => {
+  const created = await store.write((d) => {
     const e = {
       id: newId('exp'),
       memberId: me.id,
@@ -330,7 +327,7 @@ app.post('/api/expenses', auth.requireAuth(), wrap((req, res) => {
   res.status(201).json({ expense: publicExpense(created) });
 }));
 
-app.put('/api/expenses/:id', auth.requireAuth(), wrap((req, res) => {
+app.put('/api/expenses/:id', auth.requireAuth(), wrap(async (req, res) => {
   const existing = store.db().expenses.find((e) => e.id === req.params.id);
   if (!existing) throw new HttpError(404, 'That purchase no longer exists.');
   if (existing.memberId !== req.user.id) {
@@ -338,7 +335,7 @@ app.put('/api/expenses/:id', auth.requireAuth(), wrap((req, res) => {
   }
   const input = parseExpense(req.body || {});
 
-  const updated = store.write((d) => {
+  const updated = await store.write((d) => {
     const e = d.expenses.find((x) => x.id === existing.id);
     Object.assign(e, { item: input.item, amount: input.amount, date: input.date, category: input.category, updatedAt: nowIso() });
     if (input.receipt !== undefined) e.receipt = input.receipt; // omitted = keep the current bill
@@ -348,13 +345,13 @@ app.put('/api/expenses/:id', auth.requireAuth(), wrap((req, res) => {
   res.json({ expense: publicExpense(updated) });
 }));
 
-app.delete('/api/expenses/:id', auth.requireAuth(), wrap((req, res) => {
+app.delete('/api/expenses/:id', auth.requireAuth(), wrap(async (req, res) => {
   const existing = store.db().expenses.find((e) => e.id === req.params.id);
   if (!existing) throw new HttpError(404, 'That purchase no longer exists.');
   if (existing.memberId !== req.user.id) {
     throw new HttpError(403, 'Only the person who added this purchase can delete it.');
   }
-  store.write((d) => {
+  await store.write((d) => {
     d.expenses = d.expenses.filter((e) => e.id !== existing.id);
     store.addAudit(d, req.user.name, 'DELETED', `Deleted "${existing.item}" (${inr(existing.amount)})`);
   });
@@ -369,7 +366,7 @@ app.get('/api/expenses/:id/receipt', auth.requireAuth(), wrap((req, res) => {
 
 // ---- Leave: each person edits only their own days ----
 
-app.put('/api/leave', auth.requireAuth(), wrap((req, res) => {
+app.put('/api/leave', auth.requireAuth(), wrap(async (req, res) => {
   const ym = requireYm(req.body && req.body.month);
   const N = daysInMonth(ym);
   const days = Number(req.body && req.body.days);
@@ -379,7 +376,7 @@ app.put('/api/leave', auth.requireAuth(), wrap((req, res) => {
   const note = String((req.body && req.body.note) || '').trim().slice(0, 120);
   const rule = days > 7 ? 'more than 7, so deducted' : '7 or fewer, no deduction';
 
-  store.write((d) => {
+  await store.write((d) => {
     d.leaves[ym] ||= {};
     d.leaves[ym][req.user.id] = { days, note, updatedAt: nowIso() };
     store.addAudit(d, req.user.name, 'LEAVE', `Set ${days} day(s) away for ${monthLabel(ym)} (${rule})`);
@@ -389,7 +386,7 @@ app.put('/api/leave', auth.requireAuth(), wrap((req, res) => {
 
 // ---- Who pays whom: mark transfers paid ----
 
-app.put('/api/settlement/:ym/paid', auth.requireAuth(), wrap((req, res) => {
+app.put('/api/settlement/:ym/paid', auth.requireAuth(), wrap(async (req, res) => {
   const ym = requireYm(req.params.ym);
   const key = String((req.body && req.body.key) || '');
   const settled = Boolean(req.body && req.body.settled);
@@ -400,7 +397,7 @@ app.put('/api/settlement/:ym/paid', auth.requireAuth(), wrap((req, res) => {
   if (me.id !== t.fromId && me.id !== t.toId && me.role !== 'admin') {
     throw new HttpError(403, 'Only the payer, the receiver or the admin can mark this paid.');
   }
-  store.write((d) => {
+  await store.write((d) => {
     store.ensureMonth(d, ym).settledKeys[key] = settled;
     store.addAudit(d, me.name, 'PAYMENT', `${settled ? 'Marked paid' : 'Unmarked'}: ${t.fromName} to ${t.toName} ${inr(t.amount)}`);
   });
@@ -429,7 +426,7 @@ app.post('/api/admin/members/:id/reset-password', auth.requireAuth(), auth.requi
     temp = auth.generateTempPassword(store.db().members);
   }
 
-  store.write((d) => {
+  await store.write((d) => {
     const m = d.members.find((x) => x.id === target.id);
     m.passwordHash = auth.hash(temp);
     m.mustChangePassword = true; // they must pick their own at next sign-in

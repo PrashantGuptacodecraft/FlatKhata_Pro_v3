@@ -24,7 +24,7 @@ async function run() {
 
   const temp = auth.generateTempPassword(members);
 
-  store.write((d) => {
+  await store.write((d) => {
     const m = d.members.find((x) => x.id === target.id);
     m.passwordHash = auth.hash(temp);
     m.mustChangePassword = true;
@@ -32,10 +32,6 @@ async function run() {
     m.updatedAt = new Date().toISOString();
     store.addAudit(d, 'Server CLI', 'RESET', `Reset password for ${m.name} from the command line`);
   });
-
-  if (store.syncNow) {
-    await store.syncNow();
-  }
 
   console.log(`New temporary password for ${target.name}: ${temp}`);
   console.log('They must choose their own password at the next sign-in.');

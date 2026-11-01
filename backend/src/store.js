@@ -8,6 +8,7 @@ const dbModule = require('./db');
 const FILE = path.join(DATA_DIR, 'db.json');
 const AUDIT_LIMIT = 300;
 let state = null;
+let lastLoadedAt = 0;
 let isSyncing = false;
 let syncRequested = false;
 
@@ -23,6 +24,24 @@ function load() {
   return state;
 }
 
+async function refreshIfStale(maxAgeMs = 2000) {
+  if (!dbModule.isConfigured()) return state;
+  const now = Date.now();
+  if (state && now - lastLoadedAt < maxAgeMs) {
+    return state;
+  }
+  try {
+    const pgState = await dbModule.loadState();
+    if (pgState) {
+      state = pgState;
+      lastLoadedAt = Date.now();
+    }
+  } catch (err) {
+    console.error('[db] Error refreshing stale state:', err.message);
+  }
+  return state;
+}
+
 async function initStore() {
   if (state) return state;
 
@@ -32,6 +51,7 @@ async function initStore() {
       const pgState = await dbModule.loadState();
       if (pgState) {
         state = pgState;
+        lastLoadedAt = Date.now();
         // Keep local file replica in sync
         try {
           const tmp = `${FILE}.tmp`;
@@ -103,9 +123,17 @@ function db() {
   return state;
 }
 
-function write(mutator) {
+async function write(mutator) {
   const result = mutator(state);
+  lastLoadedAt = Date.now();
   persist();
+  if (dbModule.isConfigured()) {
+    try {
+      await syncNow();
+    } catch (err) {
+      console.error('[store] Direct DB sync error:', err.message);
+    }
+  }
   return result;
 }
 
@@ -124,6 +152,7 @@ function ensureMonth(d, ym) {
 module.exports = {
   load,
   initStore,
+  refreshIfStale,
   syncNow,
   init,
   db,

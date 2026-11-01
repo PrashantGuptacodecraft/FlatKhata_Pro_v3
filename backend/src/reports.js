@@ -133,7 +133,7 @@ async function sendMonthReport(ym, { triggeredBy = 'System' } = {}) {
     results,
   };
 
-  store.write((d) => {
+  await store.write((d) => {
     const rec = store.ensureMonth(d, ym);
     rec.reports = [record, ...rec.reports].slice(0, 12);
     store.addAudit(d, triggeredBy, 'EMAIL', `${monthLabel(ym)} report: ${record.delivered} delivered, ${record.failed} failed`);
@@ -146,7 +146,7 @@ async function sendOnce(ym, now, triggeredBy) {
   const existing = store.db().months[ym];
   if (existing && existing.autoSentAt) return null;
   const record = await sendMonthReport(ym, { triggeredBy });
-  store.write((d) => {
+  await store.write((d) => {
     store.ensureMonth(d, ym).autoSentAt = now.toISOString();
   });
   return record;
